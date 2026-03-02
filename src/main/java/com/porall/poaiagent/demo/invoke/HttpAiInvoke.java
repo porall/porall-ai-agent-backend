@@ -1,46 +1,58 @@
 package com.porall.poaiagent.demo.invoke;// 建议dashscope SDK的版本 >= 2.12.0
-import java.util.Arrays;
-import java.lang.System;
-import com.alibaba.dashscope.aigc.generation.Generation;
-import com.alibaba.dashscope.aigc.generation.GenerationParam;
-import com.alibaba.dashscope.aigc.generation.GenerationResult;
-import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.exception.ApiException;
-import com.alibaba.dashscope.exception.InputRequiredException;
-import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.alibaba.dashscope.utils.JsonUtils;
+
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONArray;
+import com.porall.poaiagent.demo.invoke.TestApiKey;
 
 /**
- * 阿里云灵机AI调用
+ * 阿里云灵机AI_HTTP调用
  */
-public class SdkAiInvoke {
-    public static GenerationResult callWithMessage() throws ApiException, NoApiKeyException, InputRequiredException {
-        Generation gen = new Generation();
-        Message systemMsg = Message.builder()
-                .role(Role.SYSTEM.getValue())
-                .content("You are a helpful assistant.")
-                .build();
-        Message userMsg = Message.builder()
-                .role(Role.USER.getValue())
-                .content("你是谁？")
-                .build();
-        GenerationParam param = GenerationParam.builder()
-                .apiKey(TestApiKey.API_KEY)
-                // 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-                .model("qwen-plus")
-                .messages(Arrays.asList(systemMsg, userMsg))
-                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .build();
-        return gen.call(param);
+public class HttpAiInvoke {
+    
+    public static String callWithHttp() {
+        // 构建请求体
+        JSONObject requestBody = new JSONObject();
+        requestBody.set("model", "qwen-plus");
+        
+        JSONObject input = new JSONObject();
+        JSONArray messages = new JSONArray();
+        
+        JSONObject systemMsg = new JSONObject();
+        systemMsg.set("role", "system");
+        systemMsg.set("content", "You are a helpful assistant.");
+        messages.add(systemMsg);
+        
+        JSONObject userMsg = new JSONObject();
+        userMsg.set("role", "user");
+        userMsg.set("content", "你好,我是朱雨剑,我是个前端开发帅哥");
+        messages.add(userMsg);
+        
+        input.set("messages", messages);
+        requestBody.set("input", input);
+        
+        JSONObject parameters = new JSONObject();
+        parameters.set("result_format", "message");
+        requestBody.set("parameters", parameters);
+        
+        // 发送HTTP请求
+        HttpResponse response = HttpRequest.post("https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation")
+                .header("Authorization", "Bearer " + TestApiKey.API_KEY)
+                .header("Content-Type", "application/json")
+                .body(requestBody.toString())
+                .execute();
+        
+        return response.body();
     }
+    
     public static void main(String[] args) {
         try {
-            GenerationResult result = callWithMessage();
-            System.out.println(JsonUtils.toJson(result));
-        } catch (ApiException | NoApiKeyException | InputRequiredException e) {
-            // 使用日志框架记录异常信息
+            String result = callWithHttp();
+            System.out.println(result);
+        } catch (Exception e) {
             System.err.println("An error occurred while calling the generation service: " + e.getMessage());
+            e.printStackTrace();
         }
         System.exit(0);
     }
